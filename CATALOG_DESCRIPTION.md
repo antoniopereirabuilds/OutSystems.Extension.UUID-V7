@@ -1,4 +1,4 @@
-UuidV7Service lets ODC applications generate RFC 9562 UUID v7 identifiers. UUID v7 values are 128-bit IDs whose first 48 bits encode a Unix-millisecond timestamp, so they sort by creation time and work well as database primary keys without the index fragmentation of random UUIDs.
+UuidV7 lets ODC applications generate RFC 9562 UUID v7 identifiers. UUID v7 values are 128-bit IDs whose first 48 bits encode a Unix-millisecond timestamp, so they sort by creation time and work well as database primary keys without the index fragmentation of random UUIDs.
 
 Key capabilities:
 - Generate a single UUID v7 - returns one canonical hyphenated string per call.

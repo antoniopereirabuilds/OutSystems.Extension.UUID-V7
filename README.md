@@ -71,7 +71,7 @@ Suggested entity for storing `flightPath` rows. All sizes are recommendations:
 
 ### Wiring guide for ODC Studio
 
-After uploading the new revision in **ODC Portal -> External Libraries**, refresh the dependency in ODC Studio. The two actions appear under the `UuidV7Service` group with `goldenThreadId` as an optional `Text` input and `uuid`/`uuids`, `isSuccess`, `flightPath`, `errorMessage` as outputs. Drag a **Create<EntityName>** action below your call to `GenerateUuidV7` (or `GenerateUuidV7Batch`), bind `flightPath` to `FlightPathJson` and the input `goldenThreadId` to `GoldenThreadId`, and parse the JSON with **JSONDeserialize** if you want to populate the structured columns (`SessionId`, `MethodName`, `IsError`, `DurationMs`, `StartedAtUtc`). For ad-hoc debugging, the `goldenThreadId` you passed in can be pasted into the **Trace ID** filter on the ODC Portal **Monitoring** tab to jump straight to the matching distributed trace.
+After uploading the new revision in **ODC Portal -> External Libraries**, refresh the dependency in ODC Studio. The two actions appear under the `UuidV7` group with `goldenThreadId` as an optional `Text` input and `uuid`/`uuids`, `isSuccess`, `flightPath`, `errorMessage` as outputs. Drag a **Create<EntityName>** action below your call to `GenerateUuidV7` (or `GenerateUuidV7Batch`), bind `flightPath` to `FlightPathJson` and the input `goldenThreadId` to `GoldenThreadId`, and parse the JSON with **JSONDeserialize** if you want to populate the structured columns (`SessionId`, `MethodName`, `IsError`, `DurationMs`, `StartedAtUtc`). For ad-hoc debugging, the `goldenThreadId` you passed in can be pasted into the **Trace ID** filter on the ODC Portal **Monitoring** tab to jump straight to the matching distributed trace.
 
 ## Build
 
@@ -98,7 +98,7 @@ A push of a `v*` Git tag triggers `.github/workflows/release.yml`, which runs th
 1. Open the **ODC Portal** -> **External Libraries**.
 2. Click **Upload new library** (or **Upload new revision** when updating).
 3. Upload the asset zip produced by the `Build, Test, Package` workflow (attached to the matching GitHub Release).
-4. In **ODC Studio**, add the library as an app dependency. The actions above appear under the `UuidV7Service` group.
+4. In **ODC Studio**, add the library as an app dependency. The actions above appear under the `UuidV7` group.
 
 ## Technical Details
 

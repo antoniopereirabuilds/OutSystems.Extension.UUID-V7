@@ -1,6 +1,6 @@
 ## What it does
 
-UuidV7Service generates RFC 9562 UUID v7 identifiers for ODC applications. UUID v7 values are 128-bit IDs whose first 48 bits encode a Unix-millisecond timestamp, so a list of them sorts naturally by creation time. That makes them well-suited as database primary keys — index pages stay densely packed instead of fragmenting the way random UUIDs cause — and as correlation IDs across distributed calls. .NET 8 has no native UUID v7 support, so this library exists to fill that gap as a Server Action you can drag into any flow.
+UuidV7 generates RFC 9562 UUID v7 identifiers for ODC applications. UUID v7 values are 128-bit IDs whose first 48 bits encode a Unix-millisecond timestamp, so a list of them sorts naturally by creation time. That makes them well-suited as database primary keys — index pages stay densely packed instead of fragmenting the way random UUIDs cause — and as correlation IDs across distributed calls. .NET 8 has no native UUID v7 support, so this library exists to fill that gap as a Server Action you can drag into any flow.
 
 Every call also returns a Flight Recorder JSON audit trail, even on failure, so you can persist a per-call diagnostic record alongside the result.
 
@@ -15,7 +15,7 @@ Both actions follow a uniform contract: validation problems return isSuccess = f
 
 ## How to use
 
-In ODC Studio, add the library as an app dependency. The two Server Actions appear under the UuidV7Service group. Drag GenerateUuidV7 (or GenerateUuidV7Batch) into a flow, leave goldenThreadId empty for one-off calls, or pass a trace ID generated upstream when you want the call linked to a wider distributed trace. Use the uuid (or uuids) output as your identifier and check isSuccess before consuming it.
+In ODC Studio, add the library as an app dependency. The two Server Actions appear under the UuidV7 group. Drag GenerateUuidV7 (or GenerateUuidV7Batch) into a flow, leave goldenThreadId empty for one-off calls, or pass a trace ID generated upstream when you want the call linked to a wider distributed trace. Use the uuid (or uuids) output as your identifier and check isSuccess before consuming it.
 
 For auditing or troubleshooting, persist the flightPath JSON to an entity. The same goldenThreadId you supplied is echoed back inside the JSON as the session CorrelationId, and can be pasted into the Trace ID filter on the ODC Portal Monitoring tab to jump straight to the matching distributed trace.
 

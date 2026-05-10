@@ -10,7 +10,7 @@ namespace OutSystems.UuidV7
     /// </summary>
     [OSInterface(
         Description = "Generates RFC 9562 UUID v7 values (time-ordered, lexicographically sortable) using the UUIDNext library.",
-        Name = "UuidV7Service",
+        Name = "UuidV7",
         IconResourceName = "OutSystems.UuidV7.resources.UUIDv7_icon.png"
     )]
     public interface IUuidV7Service
@@ -26,7 +26,7 @@ namespace OutSystems.UuidV7
         /// <param name="goldenThreadId">Optional Flight Recorder trace ID for distributed tracing. Defaults to empty string if omitted. Ignored when <paramref name="enableTelemetry"/> is false.</param>
         /// <param name="enableTelemetry">When true (default), the Flight Recorder audit trail is produced and returned in <paramref name="flightPath"/>. When false, telemetry is skipped entirely (no allocation, no JSON serialization) and <paramref name="flightPath"/> is empty. Use false in hot paths where the ~5 µs telemetry cost is not justified.</param>
         /// <remarks>
-        /// ODC mapping: Server Action <c>GenerateUuidV7</c> in the <c>UuidV7Service</c> external library.
+        /// ODC mapping: Server Action <c>GenerateUuidV7</c> in the <c>UuidV7</c> external library.
         /// Backed by <c>UUIDNext.Uuid.NewSequential()</c>; in-millisecond monotonicity is preserved by the library's rand_a counter.
         /// </remarks>
         [OSAction(
@@ -65,7 +65,7 @@ namespace OutSystems.UuidV7
         /// <param name="goldenThreadId">Optional Flight Recorder trace ID for distributed tracing. Defaults to empty string if omitted. Ignored when <paramref name="enableTelemetry"/> is false.</param>
         /// <param name="enableTelemetry">When true (default), the Flight Recorder audit trail is produced and returned in <paramref name="flightPath"/>. When false, telemetry is skipped entirely (no allocation, no JSON serialization) and <paramref name="flightPath"/> is empty. The Flight Recorder cost is fixed (~5 µs) per call regardless of batch size, so for batches of 100+ UUIDs disabling telemetry rarely pays off.</param>
         /// <remarks>
-        /// ODC mapping: Server Action <c>GenerateUuidV7Batch</c> in the <c>UuidV7Service</c> external library.
+        /// ODC mapping: Server Action <c>GenerateUuidV7Batch</c> in the <c>UuidV7</c> external library.
         /// The 1000 cap keeps a single ODC Lambda invocation comfortably within typical 256 MB / 30 s constraints.
         /// All UUIDs in the returned list satisfy the RFC 9562 §6.2 method 1 monotonicity guarantee.
         /// </remarks>
