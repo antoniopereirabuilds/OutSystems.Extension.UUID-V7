@@ -94,9 +94,11 @@ jobs:
 
     - name: Generate SBOM (CycloneDX)
       run: |
-        dotnet tool install --global CycloneDX --version 4.4.0
+        dotnet tool install --global CycloneDX --version 6.2.0
         dotnet CycloneDX ${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.csproj \
-          --output ./sbom --filename ${{ env.PRODUCT_NAME }}_${{ steps.get_version.outputs.VERSION }}.sbom.json --json
+          --output ./sbom \
+          --filename ${{ env.PRODUCT_NAME }}_${{ steps.get_version.outputs.VERSION }}.sbom.json \
+          --output-format Json
 
     - name: Attest build provenance
       uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
