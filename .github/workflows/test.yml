@@ -1,0 +1,67 @@
+name: CI - Run Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT_NAME: OutSystems.UuidV7
+  TESTS_PROJECT: OutSystems.UuidV7.UnitTests
+  PRODUCT_NAME: UuidV7
+
+jobs:
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.TESTS_PROJECT }}/${{ env.TESTS_PROJECT }}.csproj
+
+    - name: Audit dependencies (fail on any vulnerability, transitive included)
+      run: |
+        set -o pipefail
+        dotnet list ${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.csproj package --vulnerable --include-transitive 2>&1 | tee audit.log
+        if grep -E '^\s+>' audit.log; then
+          echo "::error::Vulnerable packages detected"
+          exit 1
+        fi
+
+    - name: Run Tests
+      run: |
+        dotnet test ${{ env.TESTS_PROJECT }}/${{ env.TESTS_PROJECT }}.csproj \
+        --configuration Release \
+        --no-restore \
+        --nologo \
+        --collect:"XPlat Code Coverage" \
+        --results-directory ./coverage
+
+    - name: Report Code Coverage
+      uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
+      with:
+        filename: coverage/**/coverage.cobertura.xml
+        badge: true
+        fail_below_min: false
+        format: markdown
+        output: both
+
+    - name: Write Summary
+      run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY

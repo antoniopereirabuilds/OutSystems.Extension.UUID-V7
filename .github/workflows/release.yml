@@ -1,0 +1,118 @@
+name: Build and Package Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_NAME: OutSystems.UuidV7
+  TESTS_PROJECT: OutSystems.UuidV7.UnitTests
+  PRODUCT_NAME: UuidV7
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_NAME }}.sln -r linux-x64
+
+    - name: Audit dependencies (fail on any vulnerability, transitive included)
+      run: |
+        set -o pipefail
+        dotnet list ${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.csproj package --vulnerable --include-transitive 2>&1 | tee audit.log
+        if grep -E '^\s+>' audit.log; then
+          echo "::error::Vulnerable packages detected"
+          exit 1
+        fi
+
+    # --- THE GATEKEEPER: RUN TESTS ---
+
+    - name: Run Tests
+      run: |
+        dotnet test ${{ env.TESTS_PROJECT }}/${{ env.TESTS_PROJECT }}.csproj \
+        --configuration Release \
+        --no-restore \
+        --nologo \
+        --collect:"XPlat Code Coverage" \
+        --results-directory ./coverage
+
+    - name: Report Code Coverage
+      uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
+      with:
+        filename: coverage/**/coverage.cobertura.xml
+        badge: true
+        format: markdown
+        output: both
+
+    - name: Write Summary
+      run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+
+    # --- PACKAGING STEPS (Only runs if tests pass) ---
+
+    - name: Get Version from Tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Publish App
+      run: |
+        dotnet publish ${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.csproj \
+        -c Release \
+        -r linux-x64 \
+        --self-contained false \
+        --no-restore \
+        -o ./publish
+
+    - name: Create Versioned Zip
+      id: zip
+      run: |
+        cd ./publish
+        zip -r ../${{ env.PRODUCT_NAME }}_${{ steps.get_version.outputs.VERSION }}.zip .
+        cd ..
+        echo "ZIP=${{ env.PRODUCT_NAME }}_${{ steps.get_version.outputs.VERSION }}.zip" >> $GITHUB_OUTPUT
+
+    - name: Generate SHA-256 checksum
+      run: |
+        sha256sum ${{ steps.zip.outputs.ZIP }} > ${{ steps.zip.outputs.ZIP }}.sha256
+        cat ${{ steps.zip.outputs.ZIP }}.sha256
+
+    - name: Generate SBOM (CycloneDX)
+      run: |
+        dotnet tool install --global CycloneDX --version 4.4.0
+        dotnet CycloneDX ${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.csproj \
+          --output ./sbom --filename ${{ env.PRODUCT_NAME }}_${{ steps.get_version.outputs.VERSION }}.sbom.json --json
+
+    - name: Attest build provenance
+      uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+      with:
+        subject-path: ${{ steps.zip.outputs.ZIP }}
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+      with:
+        files: |
+          ${{ steps.zip.outputs.ZIP }}
+          ${{ steps.zip.outputs.ZIP }}.sha256
+          ./sbom/${{ env.PRODUCT_NAME }}_${{ steps.get_version.outputs.VERSION }}.sbom.json
+        name: Release ${{ steps.get_version.outputs.VERSION }}
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
