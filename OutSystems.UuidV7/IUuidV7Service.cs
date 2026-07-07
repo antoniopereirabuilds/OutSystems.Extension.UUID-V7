@@ -5,8 +5,7 @@ namespace OutSystems.UuidV7
 {
     /// <summary>
     /// OutSystems ODC External Library that exposes RFC 9562 UUID v7 (time-ordered, 128-bit)
-    /// generation as Server Actions. Wraps the UUIDNext NuGet package because .NET 8 has no
-    /// native UUID v7 support.
+    /// generation as Server Actions. Wraps the UUIDNext NuGet package for UUID v7 generation.
     /// </summary>
     [OSInterface(
         Description = "Generates RFC 9562 UUID v7 values (time-ordered, lexicographically sortable) using the UUIDNext library.",

@@ -184,7 +184,7 @@ namespace OutSystems.UuidV7
         /// <returns>
         /// Empty string when input is null or empty; otherwise a copy truncated to
         /// <see cref="MaxGoldenThreadIdLength"/> characters with C0 control characters
-        /// (0x00-0x1F) and DEL (0x7F) removed.
+        /// (0x00-0x1F), DEL (0x7F), and Unicode line separators (U+0085, U+2028, U+2029) removed.
         /// </returns>
         /// <remarks>
         /// Stripping CR/LF and other control characters prevents a hostile caller from forging
@@ -200,8 +200,9 @@ namespace OutSystems.UuidV7
             for (int i = 0; i < len; i++)
             {
                 char c = id[i];
-                // Strip C0 controls (0x00-0x1F) and DEL (0x7F) so embedded CR/LF can't forge log lines downstream.
-                if (c >= 0x20 && c != 0x7F) buffer[j++] = c;
+                // Strip C0 controls (0x00-0x1F), DEL (0x7F), and Unicode line separators
+                // (NEL U+0085, LS U+2028, PS U+2029) so embedded line breaks can't forge log lines downstream.
+                if (c >= 0x20 && c != '\u007F' && c != '\u0085' && c != '\u2028' && c != '\u2029') buffer[j++] = c;
             }
             return new string(buffer, 0, j);
         }

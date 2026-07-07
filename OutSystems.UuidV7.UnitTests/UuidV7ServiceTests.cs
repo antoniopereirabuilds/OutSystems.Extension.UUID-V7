@@ -281,6 +281,21 @@ namespace OutSystems.UuidV7.UnitTests
         }
 
         [Fact]
+        public void GenerateUuidV7_GoldenThreadIdWithUnicodeLineSeparators_StripsThemFromTelemetry()
+        {
+            // NEL (U+0085), LS (U+2028), PS (U+2029) are line-break characters that C0 stripping misses;
+            // they must also be removed to prevent log forging in downstream non-JSON renderers.
+            const string hostile = "trace\u0085FAKE\u2028LOG\u2029end";
+            const string expected = "traceFAKELOGend";
+
+            _sut.GenerateUuidV7(out _, out _, out var flightPath, out _, hostile);
+
+            var batch = JObject.Parse(flightPath);
+            var correlationId = (string?)batch["SessionData"]?["CorrelationId"];
+            Assert.Equal(expected, correlationId);
+        }
+
+        [Fact]
         public void GenerateUuidV7_TelemetryDisabled_FlightPathIsEmptyButUuidStillReturned()
         {
             _sut.GenerateUuidV7(out var uuid, out var isSuccess, out var flightPath, out var errorMessage,

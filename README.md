@@ -1,6 +1,6 @@
 # OutSystems.Extension.UUID-V7
 
-OutSystems Developer Cloud (ODC) External Library that exposes **UUID v7** (RFC 9562, time-ordered) generation to ODC apps. .NET 8 has no native UUID v7 support, so this library wraps the [UUIDNext](https://github.com/mareek/UUIDNext) NuGet package and surfaces it as a Server Action.
+OutSystems Developer Cloud (ODC) External Library that exposes **UUID v7** (RFC 9562, time-ordered) generation to ODC apps. It wraps the [UUIDNext](https://github.com/mareek/UUIDNext) NuGet package and surfaces it as a Server Action.
 
 UUID v7 values are 128-bit identifiers whose first 48 bits encode a Unix-millisecond timestamp, making them lexicographically sortable and ideal as database primary keys (better index locality than random UUIDs, no privacy leak from MAC addresses like UUID v1).
 
@@ -35,13 +35,17 @@ Generates a batch of UUID v7 values. `count` must be between 1 and 1000 inclusiv
 | `flightPath` | out | Text | Structured Flight Recorder JSON. Non-empty when telemetry is enabled; empty when `enableTelemetry` is False. |
 | `errorMessage` | out | Text | Error details if `isSuccess` is false; empty otherwise. |
 
+## Structures
+
+This library exposes no `[OSStructure]` types. All inputs and outputs use ODC primitive types (`Text`, `Integer`, `Boolean`) plus a `List Text` for the batch result (`uuids`).
+
 ## Telemetry
 
 Both actions are instrumented with the [ODC Flight Recorder SDK](https://github.com/michaeldeguzman/odc-flight-recorder) (`ODC.FlightRecorder.SDK` 1.0.2). Every call populates the `flightPath` output — a JSON blob describing every step of the invocation — even on error. Persist `flightPath` to an entity for auditing and replay.
 
-The `goldenThreadId` you pass in is propagated as the Flight Recorder session's `CorrelationId`, so the same value can be used to join `flightPath` rows to your own logs or to the **Trace ID** filter on the ODC Portal **Monitoring** tab. The library caps `goldenThreadId` at 200 characters and strips C0 control characters and `DEL` (0x7F) before propagation, to prevent log-line forging in any downstream consumer that renders the value unescaped.
+The `goldenThreadId` you pass in is propagated as the Flight Recorder session's `CorrelationId`, so the same value can be used to join `flightPath` rows to your own logs or to the **Trace ID** filter on the ODC Portal **Monitoring** tab. The library caps `goldenThreadId` at 200 characters and strips C0 control characters (0x00-0x1F), `DEL` (0x7F), and Unicode line separators (`U+0085`, `U+2028`, `U+2029`) before propagation, to prevent log-line forging in any downstream consumer that renders the value unescaped.
 
-> **Security note.** Do not pass PII, secrets, or session tokens in `goldenThreadId`. The value is persisted in plain text inside `flightPath` and may be retained per your ODC retention policy. If you persist `flightPath` rows to an entity (see schema below), enforce a retention timer (e.g. delete rows where `CreatedAt < AddDays(CurrDateTime(), -90)`) to comply with GDPR Art. 5(1)(c) data minimisation.
+> **Security note (pentest finding F2).** `goldenThreadId` is written verbatim into telemetry: it flows into `flightPath` -> the Flight Recorder session `CorrelationId` -> CloudWatch. Sanitization removes control characters and line separators only — it does **not** redact sensitive content. Callers **must not** pass PII, secrets, or session tokens in `goldenThreadId`. The value is persisted in plain text inside `flightPath` and may be retained per your ODC retention policy. If you persist `flightPath` rows to an entity (see schema below), apply a retention policy / timer (e.g. delete rows where `CreatedAt < AddDays(CurrDateTime(), -90)`) to comply with GDPR Art. 5(1)(c) data minimisation.
 
 Steps emitted:
 
@@ -93,17 +97,26 @@ cd ./publish && zip -r ../UuidV7_Asset.zip . && cd ..
 
 A push of a `v*` Git tag triggers `.github/workflows/release.yml`, which runs the same steps and attaches the zip to a GitHub Release.
 
-## Install in ODC
+## Installation
 
 1. Open the **ODC Portal** -> **External Libraries**.
 2. Click **Upload new library** (or **Upload new revision** when updating).
 3. Upload the asset zip produced by the `Build, Test, Package` workflow (attached to the matching GitHub Release).
 4. In **ODC Studio**, add the library as an app dependency. The actions above appear under the `UuidV7` group.
 
+## Constraints
+
+- **Batch bounds:** `GenerateUuidV7Batch` accepts `count` from 1 to 1000 inclusive (`MaxBatchSize = 1000`). Out-of-range values fail gracefully — `isSuccess = false` with `errorMessage` populated, no exception thrown to the ODC runtime.
+- **Never throws:** both actions surface all failures through the `isSuccess` / `errorMessage` pair; they never throw to the ODC runtime.
+- **Stateless:** each invocation is independent. Do not rely on any in-memory state between calls — this matches the AWS Lambda execution model used by ODC External Libraries.
+- **Telemetry cost:** the Flight Recorder adds ~5 µs per call and populates `flightPath` on every invocation (including the failure path) when `enableTelemetry` is True. Set `enableTelemetry = False` to skip it entirely; `flightPath` then returns empty.
+- **`goldenThreadId` sensitivity (F2):** the value is echoed verbatim into `flightPath` -> `CorrelationId` -> CloudWatch. It is sanitized for control characters and line separators only, **not** for sensitive content. Do not pass PII, secrets, or session tokens; apply a retention policy to any stored `flightPath` data.
+- **Target framework:** `net10.0` (see below).
+
 ## Technical Details
 
 - **Wrapped library:** UUIDNext 4.2.4 (`Uuid.NewSequential()` returns RFC 9562 UUID v7).
 - **Telemetry:** ODC.FlightRecorder.SDK 1.0.2.
-- **Target:** .NET 8, `linux-x64`, framework-dependent.
+- **Target:** .NET 10 (`net10.0`), `linux-x64`, framework-dependent.
 - **ODC SDK:** `OutSystems.ExternalLibraries.SDK` 1.5.0.
 - **License:** see repository.
